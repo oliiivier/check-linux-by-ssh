@@ -57,13 +57,23 @@ def get_meminfo(client):
     #      TOTAL      USED        FREE          SHARED  BUF        CACHED
     stdin, stdout, stderr = client.exec_command('LC_ALL=C free -k')
     total = used = free = shared = buffed = cached = 0
+    is_available = 0
     for line in stdout:
         line = line.strip()
-        
+
+        # free on redhat 7 return :
+        #              total        used        free      shared  buff/cache   available
+        #Mem:        1877688      124584      708416       98708     1044688     1456760
+        # used (rhel7) = consumed
+        if line.endswith('available'):
+            is_available = 1
         if line.startswith('Mem'):
             tmp = line.split(':')
             # We will have a [2064856, 1736636, 328220, 0, 142880, 413184]
             total, used, free, shared, buffed, cached = (int(v) for v in  tmp[1].split(' ') if v)
+            if is_available == 1: # correction for new version of free command to match with the old one
+                cached=0
+                used=total-free
         
         if line.startswith('Swap'):
             # We will have a [4385148          0   14385148]
