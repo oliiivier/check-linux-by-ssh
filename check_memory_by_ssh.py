@@ -60,7 +60,6 @@ def get_meminfo(client):
     is_available = 0
     for line in stdout:
         line = line.strip()
-
         # free on redhat 7 return :
         #              total        used        free      shared  buff/cache   available
         #Mem:        1877688      124584      708416       98708     1044688     1456760
@@ -71,10 +70,10 @@ def get_meminfo(client):
             tmp = line.split(':')
             # We will have a [2064856, 1736636, 328220, 0, 142880, 413184]
             total, used, free, shared, buffed, cached = (int(v) for v in  tmp[1].split(' ') if v)
-            if is_available == 1: # correction for new version of free command to match with the old one
+            if is_available == 1:
                 cached=0
                 used=total-free
-        
+
         if line.startswith('Swap'):
             # We will have a [4385148          0   14385148]
             tmp = line.split(':')
@@ -82,7 +81,7 @@ def get_meminfo(client):
 
     # Before return, close the client
     client.close()
-            
+
     return total, used, free, shared, buffed, cached, swap_total, swap_used, swap_free
 
 
@@ -142,7 +141,7 @@ if __name__ == '__main__':
     # Ok now connect, and try to get values for memory
     client = schecks.connect(hostname, port, ssh_key_file, passphrase, user)
     total, used, free, shared, buffed, cached, swap_total, swap_used, swap_free = get_meminfo(client)
-    
+
     # Maybe we failed at getting data
     if total == 0:
         print "Error : cannot fetch memory values from host"
@@ -151,33 +150,33 @@ if __name__ == '__main__':
     # Ok analyse data
     pct_used = 100 * float(used - buffed - cached) / total
     pct_used = int(pct_used)
-    
+
     d = {'used':used, 'buffered':buffed, 'cached':cached, 'free':free, 'consumed': used - buffed - cached}
-    
+
     perfdata = ''
     for (k,v) in d.iteritems():
         # For used we sould set warning,critical value in perfdata
         _warn, _crit = '', ''
         if k == 'consumed':
-            _warn, _crit = str(warning)+'%', str(critical)+'%'
-        perfdata += ' %s=%s%%;%s;%s;0%%;100%%' % (k, int(100 * float(v)/total), _warn, _crit)
+            _warn, _crit = str(warning), str(critical)
+        perfdata += ' %s=%s%%;%s;%s;0;100' % (k, int(100 * float(v)/total), _warn, _crit)
 
     # Add swap if required (actually no check supported)
     if opts.swap :
         d_swap = {'swap_used':swap_used, 'swap_free':swap_free}
         for (k,v) in d_swap.iteritems():
-            perfdata += ' %s=%s%%;;;0%%;100%%' % (k, int(100 * float(v)/swap_total) if swap_total else 0)
-    
-    
+            perfdata += ' %s=%s%%;;;0;100' % (k, int(100 * float(v)/swap_total) if swap_total else 0)
+
+
     # Add measurement if required (actually no check supported) + total
     if opts.measurement :
         d['total']=total
         for (k,v) in d.iteritems():
-            perfdata += ' %s=%sKB;;;0KB;%sKB' % (k+'_abs', v, total) 
+            perfdata += ' %s=%sB;;;0;%s' % (k+'_abs', v*1024, total*1024)
         if opts.swap:
             d_swap['swap_total']=swap_total
             for (k,v) in d_swap.iteritems():
-                perfdata += ' %s=%sKB;;;0KB;%sKB' % (k, v, swap_total) 
+                perfdata += ' %s=%sB;;;0;%s' % (k, v*1024, swap_total*1024)
 
 
     # And compare to limits
@@ -192,5 +191,5 @@ if __name__ == '__main__':
     print "Ok : memory consumption is %s%% | %s" % (pct_used, perfdata)
     sys.exit(0)
 
-        
+
 
