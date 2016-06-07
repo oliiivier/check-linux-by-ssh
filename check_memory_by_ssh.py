@@ -176,7 +176,7 @@ if __name__ == '__main__':
         if opts.swap:
             d_swap['swap_total']=swap_total
             for (k,v) in d_swap.iteritems():
-                perfdata += ' %s=%sB;;;0;%s' % (k, v*1024, swap_total*1024)
+                perfdata += ' %s=%sB;;;0;%s' % (k+'_abs', v*1024, swap_total*1024)
 
 
     # And compare to limits
